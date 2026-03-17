@@ -106,6 +106,19 @@ What remains unsolved:
 
 ---
 
+## C x R
+
+| Shape | R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7 | R8 |
+|-------|----|----|----|----|----|----|----|----|----|
+| C | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+**Notes:**
+- `R2` passes for Shape `C` because the current selected shape now has a concrete recognition-first continuity contract: `workspace_snapshot` plus `terminal_snapshot`, explicit recovery states, and relaunch actions where exact continuity cannot be proven.
+- `R4` passes for Shape `C` on a macOS-first basis because Ghostty remains the visible terminal surface while the product adds continuity through an external orchestration layer using Ghostty's AppleScript automation.
+- Remaining uncertainty is now implementation risk inside Shape `C`, not a fit-check failure: `C5`, `C6`, `C2.2`, `C2.3`, `C4.6`, and `C6.3` still carry `⚠️` and should be resolved or further spiked during detailing and slicing.
+
+---
+
 ## Detail C: Concrete Product Shape
 
 | Part | Mechanism | Flag |
