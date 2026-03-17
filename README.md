@@ -4,6 +4,9 @@
 
 It is built around one belief: terminal work should be easy to reopen, recognize, and continue after interruptions without forcing users to think like tmux experts.
 
+![1](https://github.com/user-attachments/assets/e4f484c8-1251-405c-b23c-113a94e678b3)
+
+
 ## The Problem
 
 Terminal work is fragile in practice.
