@@ -57,7 +57,7 @@ shaping: true
 | **C1** | Define the primary object as a named workspace that represents recoverable terminal work, not a raw pane tree | |
 | **C2** | Make continuity the default lifecycle: create, reopen, and resume workspaces without teaching detach/attach first | |
 | **C3** | 🟡 Use Ghostty as the visible terminal surface and orchestrate it externally through a macOS-first adapter rather than building a separate terminal emulator | |
-| **C4** | Provide a simple launcher or command palette for create, switch, recover, and inspect actions | |
+| 🟡 **C4** | 🟡 Provide a simple in-terminal command surface for save, switch, and recover actions | |
 | **C5** | Persist enough state to restore project context, layout intent, and interruption context in a legible way | ⚠️ |
 | **C6** | Expose clear status cues so users can understand which workspace is active and what each terminal is doing | ⚠️ |
 | **C7** | Keep the default path zero- or low-config, with keyboard acceleration available after the initial success path | |
@@ -102,7 +102,7 @@ Why this shape:
 
 What remains unsolved:
 - 🟡 `R4` is shaped enough for macOS-first v0, but carries implementation risk because Ghostty's AppleScript surface is new and still evolving.
-- 🟡 The companion UI shape is now clear, but the launcher and status hosts remain open: v0 recovery should be terminal-hosted first, while Raycast remains an optional macOS launcher and status host.
+- 🟡 The exact v0 entry point still needs to be proven: opening Ghostty may not itself trigger recovery automatically, so the fallback path is an in-terminal command or TUI that makes named snapshot restore and switching fast and clear.
 
 ---
 
@@ -115,7 +115,7 @@ What remains unsolved:
 **Notes:**
 - `R2` passes for Shape `C` because the current selected shape now has a concrete recognition-first continuity contract: `workspace_snapshot` plus `terminal_snapshot`, explicit recovery states, and relaunch actions where exact continuity cannot be proven.
 - `R4` passes for Shape `C` on a macOS-first basis because Ghostty remains the visible terminal surface while the product adds continuity through an external orchestration layer using Ghostty's AppleScript automation.
-- Remaining uncertainty is now implementation risk inside Shape `C`, not a fit-check failure: `C5`, `C6`, `C2.2`, `C2.3`, `C4.6`, and `C6.3` still carry `⚠️` and should be resolved or further spiked during detailing and slicing.
+- Remaining uncertainty is now implementation risk inside Shape `C`, not a fit-check failure: `C5`, `C6`, `C2.2`, `C2.3`, and `C6.3` still carry `⚠️` and should be resolved or further spiked during detailing and slicing.
 
 ---
 
@@ -124,39 +124,127 @@ What remains unsolved:
 | Part | Mechanism | Flag |
 |------|-----------|:----:|
 | **C1** | **Workspace model** | |
-| C1.1 | Named workspace with user-facing identity such as `api`, `frontend`, or `notes` | |
-| C1.2 | 🟡 Workspace stores cwd targets, labels, terminal roles, launch intent, layout intent, and recovery metadata above Ghostty primitives. See [spike-c1-2-workspace-model.md](/Users/shreyas/Desktop/Projects/ghost-in-a-shell/spike-c1-2-workspace-model.md). | ⚠️ |
-| C1.3 | Workspace is the primary thing users create, switch, recover, and inspect | |
+| 🟡 C1.1 | 🟡 A workspace is the saved Ghostty setup a user recognizes as “my work from last time,” for example: several windows, tabs, and panes arranged for one project or task, each with a human-readable label like `frontend`, `api`, or `notes` | |
+| 🟡 C1.2 | 🟡 The saved workspace remembers where each terminal was opened, what it was for, how the windows/tabs/panes were arranged, and what command or task each terminal was last meant to run. See [spike-c1-2-workspace-model.md](/Users/shreyas/Desktop/Projects/ghost-in-a-shell/spike-c1-2-workspace-model.md). | ⚠️ |
+| 🟡 C1.3 | 🟡 Workspace is the primary thing users restore, switch, and save; users should not need to think in terms of raw pane trees or attach/detach concepts | |
 | **C2** | **Continuity-first lifecycle** | |
 | C2.1 | New workspace creation defaults to recoverable behavior | |
-| C2.2 | 🟡 Resume flow reopens prior work without requiring an attach command and prioritizes recognition over exact process resurrection, with relaunch actions where continuity cannot be proven | ⚠️ |
-| C2.3 | Interruption states such as closed app, reboot, or crash reopen into a recovery flow instead of a blank terminal, with terminal-hosted recovery as the v0 default | ⚠️ |
+| 🟡 C2.2 | 🟡 Resume flow should let users bring back any named saved Ghostty setup through one obvious in-terminal command or TUI, without asking them to remember mux vocabulary | ⚠️ |
+| 🟡 C2.3 | 🟡 After Ghostty is closed, the laptop crashes, or the machine restarts, the product should offer recent named snapshots and show what could be restored exactly versus what must be manually rerun | ⚠️ |
 | **C3** | **Ghostty-native surface (macOS first)** | ⚠️ |
 | C3.1 | 🟡 Ghostty remains the only terminal renderer and visible shell surface users interact with | |
-| C3.2 | 🟡 Rust daemon or CLI owns workspace registry, persistence store, recovery logic, and workspace metadata above Ghostty primitives | |
-| C3.3 | 🟡 macOS adapter uses Ghostty AppleScript automation to create, focus, and query windows, tabs, and splits | |
-| C3.4 | 🟡 Minimal companion UI exists only for workspace operations Ghostty does not already expose well, with v0 recovery allowed to render in-terminal and optional launcher or status surfaces kept outside Ghostty | |
+| 🟡 C3.2 | 🟡 A small Rust service or CLI keeps the saved record of each workspace: window layout, tab layout, pane layout, labels, remembered locations, and recovery logic above Ghostty's own built-in window/tab/split concepts | |
+| 🟡 C3.3 | 🟡 macOS automation uses Ghostty's AppleScript hooks to open windows, create tabs, split panes, focus the right view, and read back enough visible state to rebuild the saved setup | |
+| 🟡 C3.4 | 🟡 Any extra product UI in v0 should live inside the terminal as a CLI or TUI for restore and save flows, rather than starting with a separate app surface | |
 | C3.5 | 🟡 Ghostty preview-scriptability risk is accepted, so adapter boundaries must stay narrow and swappable | |
 | C3.6 | 🟡 Linux and other platforms are deferred until the workspace model and recovery UX are proven on macOS | |
 | C3.7 | The product avoids a second competing visual shell where possible and adds continuity rather than replacing terminal interaction | |
 | **C4** | **Human command surface** | |
-| C4.1 | Command palette or launcher for create, open, recover, rename, and inspect; this is the primary product entry point outside Ghostty | |
+| 🟡 C4.1 | 🟡 The primary command surface in v0 is an in-terminal CLI or TUI for save, restore, switch, and rename actions | |
 | C4.2 | Recognition-first action labels replace obscure mux verbs | |
 | C4.3 | Shortcut hints appear in context after first-run success rather than front-loading complexity | |
-| C4.4 | 🟡 Recovery is a dedicated flow with workspace summaries, terminal summaries, status badges, and relaunch actions; in v0 this should render in the terminal rather than depend on Raycast | |
-| C4.5 | 🟡 A lightweight status entry point provides quick orientation and access to launcher or recovery without becoming a persistent dashboard | |
-| C4.6 | 🟡 A Raycast extension is an acceptable macOS-first delivery vehicle for launcher and status, but recovery should be terminal-hosted in v0 and not depend on Raycast | ⚠️ |
+| 🟡 C4.4 | 🟡 Recovery is a dedicated terminal flow showing recent named snapshots, terminal labels, and simple restore or rerun choices | |
+| 🟡 C4.5 | 🟡 Any v0 quick-entry affordance should stay minimal and optional; it is less important than making restore work reliably from inside Ghostty | |
 | **C5** | **Legible state model** | ⚠️ |
-| C5.1 | Users can see active workspace, recent workspaces, whether a workspace needs attention, and whether the workspace is `live`, `unknown`, `stopped`, or `relaunchable` | ⚠️ |
-| C5.2 | 🟡 Users can see what each terminal was for through explicit terminal roles, labels, cwd targets, Ghostty title, and last-known launch intent | ⚠️ |
-| C5.3 | 🟡 Recovery flow distinguishes restored context from processes that must be relaunched, even when rendered in-terminal | ⚠️ |
-| C5.4 | 🟡 Status labels such as `live`, `stopped`, `unknown`, and `relaunchable` communicate confidence instead of implying perfect continuity | ⚠️ |
+| 🟡 C5.1 | 🟡 The restore flow must show the selected named Ghostty snapshot clearly: which windows existed, which tabs and panes existed inside them, and the labels for what each terminal was being used for | ⚠️ |
+| 🟡 C5.2 | 🟡 Each restored terminal should show enough plain-language context for recognition, such as a label, remembered folder or location, and the last intended command or task | ⚠️ |
+| 🟡 C5.3 | 🟡 The restore flow must make it obvious which terminals were restored as-is and which ones need the user to rerun something | ⚠️ |
+| 🟡 C5.4 | 🟡 The product should avoid overexplaining with dashboard-like status ideas in v0 and instead focus on “restored” versus “needs rerun” at the moment of recovery | ⚠️ |
 | **C6** | **Low-config onboarding** | |
 | C6.1 | First run focuses on one value proposition: your workspaces come back with enough context to continue | |
-| C6.2 | Default template or starter workspace helps users succeed in under two minutes | |
+| 🟡 C6.2 | 🟡 Instead of a canned template, users should be able to arrange Ghostty the way they want and then save that exact arrangement as the workspace to bring back later | |
 | C6.3 | 🟡 Shell integration is guided or auto-detected because Ghostty recovery quality depends on cwd and title metadata being available | ⚠️ |
 | C6.4 | First-run onboarding walks the user through one successful creation-and-recovery loop before introducing advanced controls | |
-| C6.5 | Power-user features are present but not required to understand the product | |
+| 🟡 C6.5 | 🟡 v0 does not need extra power-user features beyond reliable save, restore, and switch flows | |
+
+---
+
+## Detail C: User Journeys
+
+| ID | Journey | Entry Point | Outcome |
+|----|---------|-------------|---------|
+| 🟡 JY1 | 🟡 Save the current Ghostty setup as one workspace, even when it spans multiple windows, tabs, panes, and folders | 🟡 In-terminal save command or TUI | 🟡 The exact arrangement the user is happy with becomes the workspace they can bring back later |
+| 🟡 JY2 | 🟡 Reopen recent work after closing Ghostty, after a crash, or after restarting the laptop | 🟡 Opening Ghostty plus an obvious restore command or terminal TUI | 🟡 User sees recent named snapshots and can restore the right one with plain-language choices instead of rebuilding it manually |
+| 🟡 JY3 | 🟡 Switch from one saved Ghostty setup to another, where one setup may represent a whole project with many windows and tabs | 🟡 In-terminal switch command or TUI | 🟡 Focus moves to the chosen saved setup and the user regains the intended arrangement quickly |
+| 🟡 JY4 | 🟡 Review one named snapshot just enough to confirm “yes, bring that back” | 🟡 Restore flow | 🟡 User sees a simple summary of windows, tabs, panes, and labels before restoring, without needing a separate inspect screen |
+| 🟡 JY5 | 🟡 Recover when some prior processes cannot be proven alive | 🟡 Recovery flow | 🟡 Product preserves recognition of prior intent and offers explicit relaunch choices instead of pretending exact continuity exists |
+| 🟡 JY6 | 🟡 Learn the product through a Chrome-like “bring my setup back” mental model instead of terminal jargon | 🟡 Onboarding flow after install or first launch | 🟡 User completes one save-and-restore loop and understands that Ghostty can reopen like a browser restoring tabs |
+
+### Journey Notes
+
+- `JY1` and `JY6` are the default-path proof that `R0`, `R1`, `R3`, and `R6` are being met together rather than separately.
+- `JY2` and `JY5` are the core proof that Shape `C` is about recognition-first continuity, not hidden-session resurrection theater.
+- `JY3` and `JY4` are what make the product feel better than a mux: users switch and orient through recognizable saved setups, not by mentally reconstructing pane topology.
+
+---
+
+## Detail C: Places
+
+| # | Place | Description |
+|---|-------|-------------|
+| 🟡 P1 | 🟡 Terminal Launcher TUI | 🟡 Primary in-terminal entry point for save, restore, switch, and rename actions |
+| 🟡 P2 | 🟡 Ghostty Workspace Surface | 🟡 The active terminal experience inside Ghostty where labeled terminals, titles, and workspace context are visible |
+| 🟡 P3 | 🟡 Recovery Flow | 🟡 Terminal-hosted recovery view that appears after interruption or on explicit recover action |
+| 🟡 P5 | 🟡 Onboarding Flow | 🟡 First-run guided path that teaches one successful create-and-recover loop |
+| 🟡 P6 | 🟡 Workspace Registry + Recovery Engine | 🟡 Non-UI continuity layer that stores snapshots, computes state, and drives orchestration |
+| 🟡 P7 | 🟡 Ghostty macOS Adapter | 🟡 AppleScript-backed boundary for creating, focusing, and querying Ghostty windows, tabs, and splits |
+
+---
+
+## Detail C: UI Affordances
+
+| # | Place | Affordance | Control | Wires Out | Returns To |
+|---|-------|------------|---------|-----------|------------|
+| 🟡 U1 | 🟡 P1 | 🟡 Saved setup list | 🟡 arrow keys / search | 🟡 → N1 | 🟡 → P1 |
+| 🟡 U2 | 🟡 P1 | 🟡 Save current Ghostty setup | 🟡 submit | 🟡 → N2 | |
+| 🟡 U3 | 🟡 P1 | 🟡 Restore selected saved setup | 🟡 submit | 🟡 → N3 | |
+| 🟡 U4 | 🟡 P1 | 🟡 Switch to another saved setup | 🟡 submit | 🟡 → N4 | |
+| 🟡 U5 | 🟡 P1 | 🟡 Rename saved setup | 🟡 submit | 🟡 → N5 | 🟡 → P1 |
+| 🟡 U7 | 🟡 P2 | 🟡 Ghostty window title shows workspace name and active terminal role | 🟡 visible state | | 🟡 → P2 |
+| 🟡 U8 | 🟡 P2 | 🟡 Labeled terminals or tabs showing role and remembered location | 🟡 visible state | | 🟡 → P2 |
+| 🟡 U9 | 🟡 P2 | 🟡 Open save / restore TUI command | 🟡 command | 🟡 → P1 | |
+| 🟡 U10 | 🟡 P2 | 🟡 Open recovery TUI command | 🟡 command | 🟡 → P3 | |
+| 🟡 U11 | 🟡 P3 | 🟡 Restore summary showing saved windows, tabs, panes, and labels | 🟡 visible state | | 🟡 → P3 |
+| 🟡 U12 | 🟡 P3 | 🟡 Restore everything possible | 🟡 submit | 🟡 → N6 | |
+| 🟡 U13 | 🟡 P3 | 🟡 Rerun one missing terminal | 🟡 submit | 🟡 → N7 | 🟡 → P3 |
+| 🟡 U14 | 🟡 P3 | 🟡 Skip restore for now | 🟡 submit | 🟡 → N8 | |
+| 🟡 U15 | 🟡 P5 | 🟡 Save-your-current-setup prompt | 🟡 submit | 🟡 → N9 | |
+| 🟡 U16 | 🟡 P5 | 🟡 Location and label helper prompt | 🟡 submit | 🟡 → N10 | 🟡 → P5 |
+| 🟡 U17 | 🟡 P5 | 🟡 Complete first restore walkthrough | 🟡 submit | 🟡 → N11 | |
+
+---
+
+## Detail C: Non-UI Affordances
+
+| # | Place | Affordance | Wires Out | Returns To |
+|---|-------|------------|-----------|------------|
+| 🟡 N1 | 🟡 P6 | 🟡 List saved setups and filter by name, label, or remembered location | 🟡 → U1 | 🟡 → P1 |
+| 🟡 N2 | 🟡 P6 | 🟡 Save the current Ghostty layout, labels, remembered locations, and intended commands as one workspace snapshot | 🟡 → N12 | |
+| 🟡 N3 | 🟡 P6 | 🟡 Restore the selected saved setup by invoking the Ghostty adapter to rebuild windows, tabs, and panes | 🟡 → N12, 🟡 → N13 | |
+| 🟡 N4 | 🟡 P6 | 🟡 Switch to another saved setup by focusing or rebuilding the selected Ghostty arrangement | 🟡 → N12, 🟡 → N13 | |
+| 🟡 N5 | 🟡 P6 | 🟡 Rename a saved setup and persist the updated label | 🟡 → N12 | 🟡 → P1 |
+| 🟡 N6 | 🟡 P6 | 🟡 Restore everything that can be brought back directly from the selected named snapshot | 🟡 → N13 | 🟡 → P2 |
+| 🟡 N7 | 🟡 P6 | 🟡 Rerun one missing terminal from its last remembered command or task | 🟡 → N13 | 🟡 → P3 |
+| 🟡 N8 | 🟡 P6 | 🟡 Skip restore while keeping the latest snapshot available for later | | |
+| 🟡 N9 | 🟡 P6 | 🟡 Save the user's current Ghostty setup during onboarding as their first real workspace | 🟡 → N12 | 🟡 → P5 |
+| 🟡 N10 | 🟡 P6 | 🟡 Capture helpful labels and remembered locations so the restore view is easy to recognize later | 🟡 → N12 | 🟡 → P5 |
+| 🟡 N11 | 🟡 P6 | 🟡 Trigger a first restore walkthrough so the user sees the save-and-restore loop end to end | 🟡 → U11 | |
+| 🟡 N12 | 🟡 P6 | 🟡 Persist `workspace_snapshot` and `terminal_snapshot` with labels, remembered locations, layout, and recovery hints | | |
+| 🟡 N13 | 🟡 P7 | 🟡 Create, focus, and query Ghostty windows, tabs, and splits through AppleScript automation so a saved setup can be rebuilt inside Ghostty | 🟡 → U7, 🟡 → U8 | 🟡 → P2 |
+
+---
+
+## Detail C: Affordances Made Possible
+
+| ID | Affordance Made Possible | Enabled By |
+|----|--------------------------|------------|
+| 🟡 AF1 | 🟡 “Open `frontend`” can mean “focus the right Ghostty context” instead of “reattach a session you must remember exists” | 🟡 `C1`, `C2`, `N2`, `N12` |
+| 🟡 AF2 | 🟡 Recovery can present plain-language terminal labels such as `server`, `tests`, or `notes` rather than opaque pane geometry | 🟡 `C1.2`, `C5.2`, `N12`, `N13` |
+| 🟡 AF3 | 🟡 The restore flow can say “this came back” versus “rerun this” without falsely claiming perfect persistence | 🟡 `C2`, `C5`, `N6`, `N7` |
+| 🟡 AF4 | 🟡 A user can save the exact Ghostty arrangement they have already built instead of starting from a canned template | 🟡 `C6.2`, `U2`, `N2`, `N9` |
+| 🟡 AF5 | 🟡 Onboarding can teach one save-and-restore loop in-product instead of teaching mux vocabulary or configuration upfront | 🟡 `C6`, `U15`, `U16`, `U17`, `N11` |
+| 🟡 AF6 | 🟡 Launcher and recovery can both live inside the terminal as TUIs instead of requiring a separate app surface | 🟡 `C3.4`, `C4.1`, `C4.4`, `P1`, `P3` |
+| 🟡 AF7 | 🟡 One saved setup can represent a whole project across multiple windows, tabs, panes, and folders | 🟡 `C1.1`, `C1.2`, `JY1`, `JY3` |
 
 ---
 
@@ -183,9 +271,9 @@ What remains unsolved:
 | **ARCH4** | 🟡 macOS-first scope is a product decision, not just an implementation shortcut, because it makes the Ghostty-native claim honest in v0 | |
 | **ARCH5** | 🟡 The product should enable continuity, relaunch, and recovery through Ghostty, not reimplement a terminal emulator or promise exact process resurrection | |
 | **ARCH6** | 🟡 The concrete continuity contract is the two-layer snapshot model: `workspace_snapshot` plus `terminal_snapshot` with explicit provenance and recovery status | |
-| **ARCH7** | 🟡 The minimal companion surface is three capabilities only: workspace launcher, recovery flow, and lightweight status entry point | |
-| **ARCH8** | 🟡 v0 recovery should be hostable directly in the terminal as a CLI or TUI flow, while launcher and status remain free to use Raycast or another macOS host | |
-| **ARCH9** | 🟡 The workspace model and recovery contract must stay host-agnostic so terminal, Raycast, and future product-owned shells can all sit on the same continuity layer | |
+| 🟡 ARCH7 | 🟡 The minimal v0 surface is two terminal-hosted capabilities only: save or switch flow, and recovery flow | |
+| 🟡 ARCH8 | 🟡 v0 launcher and recovery should both be hostable directly in the terminal as a CLI or TUI flow | |
+| 🟡 ARCH9 | 🟡 The workspace model and recovery contract must stay separate from any one UI host so the core save-and-restore logic remains stable over time | |
 
 ---
 
@@ -227,11 +315,11 @@ Standalone spike: [spike-x3-minimal-companion-ui.md](/Users/shreyas/Desktop/Proj
 
 | Item | Outcome |
 |------|---------|
-| **X3-R1** | 🟡 v0 should have one primary launcher for create/open/switch/recover/rename/inspect actions |
-| **X3-R2** | 🟡 Recovery requires a dedicated lightweight view with workspace cards, terminal summaries, status badges, and relaunch actions |
-| **X3-R3** | 🟡 The always-available status surface should stay minimal: active or recent workspace, attention state, and quick entry back into launcher or recovery |
-| **X3-R4** | 🟡 Onboarding should teach only one concept first: named workspaces come back with enough context to continue |
-| **X3-R5** | 🟡 The product should avoid a persistent dashboard or second shell and instead rely on a three-surface companion model |
+| 🟡 **X3-R1** | 🟡 v0 should have one primary in-terminal flow for save, switch, recover, and rename actions |
+| 🟡 **X3-R2** | 🟡 Recovery requires a dedicated lightweight terminal view showing the saved layout, labels, and relaunch choices |
+| 🟡 **X3-R3** | 🟡 The product should avoid a persistent dashboard or extra status surface in v0 |
+| 🟡 **X3-R4** | 🟡 Onboarding should teach only one concept first: your saved Ghostty setup comes back with enough context to continue |
+| 🟡 **X3-R5** | 🟡 The product should avoid a second shell and instead rely on terminal-hosted save and recovery flows |
 
 See [spike-x3-minimal-companion-ui.md](/Users/shreyas/Desktop/Projects/ghost-in-a-shell/spike-x3-minimal-companion-ui.md).
 
@@ -258,12 +346,12 @@ See [spike-x3-raycast-launcher.md](/Users/shreyas/Desktop/Projects/ghost-in-a-sh
 Proceed with **🟡 Shape C** as a **🟡 macOS-first Ghostty-native workspace orchestrator**.
 
 Delivery stance for v0 validation:
-- Make recovery terminal-hosted in v0 through a CLI or TUI flow that can be invoked directly from the terminal experience.
-- Use a Raycast extension only for launcher and status if that is the fastest way to validate macOS entry points.
-- Do not let any host redefine the product boundary: the workspace model, recovery contract, and companion-surface architecture must stay portable across terminal, Raycast, and future native shells.
+- 🟡 Make save, switch, and recovery terminal-hosted in v0 through a CLI or TUI flow that can be invoked directly from Ghostty.
+- 🟡 Accept that the first restore path may be “open Ghostty, run one obvious command, choose a named snapshot, get that setup back” rather than full automatic recovery on app launch.
+- 🟡 Do not let any future host redefine the product boundary: the workspace model and recovery contract must stay separate from the UI entry point.
 
 Spike outcomes so far:
 - `X1` established the Ghostty-native integration direction and confirmed `macOS first`.
 - `X2` is now sufficiently shaped through the continuity contract and workspace metadata model in [spike-c1-2-workspace-model.md](/Users/shreyas/Desktop/Projects/ghost-in-a-shell/spike-c1-2-workspace-model.md).
 - `X3` is now sufficiently shaped through the minimal companion UI model in [spike-x3-minimal-companion-ui.md](/Users/shreyas/Desktop/Projects/ghost-in-a-shell/spike-x3-minimal-companion-ui.md).
-- `X4` established that Raycast is a viable macOS-first host for launcher and status, but not the right default host for v0 recovery.
+- 🟡 `X4` remains historical exploration only and is not part of the selected v0 path.
