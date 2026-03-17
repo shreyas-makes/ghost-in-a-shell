@@ -1,8 +1,6 @@
 # ghost-in-a-shell
 
-`ghost-in-a-shell` is a Ghostty-native workspace continuity tool for people who live in the terminal.
-
-It is built around one belief: terminal work should be easy to reopen, recognize, and continue after interruptions without forcing users to think like tmux experts.
+`ghost-in-a-shell` is a Ghostty-native workspace continuity tool for people who live in the terminal. It is built around one belief: terminal work should be easy to reopen, recognize, and continue after interruptions without forcing users to think like tmux experts.
 
 ![1](https://github.com/user-attachments/assets/e4f484c8-1251-405c-b23c-113a94e678b3)
 
@@ -43,13 +41,10 @@ In practice, that means a workspace can carry:
 
 - project location
 - terminal roles like `server`, `editor`, `tests`, or `notes`
-- launch intent for each terminal
 - layout intent
 - last-known recovery state
 
 ## Why It Is Valuable
-
-The value is not "more terminal features."
 
 The value is:
 
@@ -98,35 +93,3 @@ It is especially aimed at people who think:
 - "I want to reopen work and immediately understand what I was doing"
 - "I like Ghostty and want continuity on top of it, not a replacement for it"
 
-## Current Status
-
-This repository is currently a product-shaping and architecture repo. It documents the product direction and the continuity model, but it is not yet a runnable implementation.
-
-The current direction is:
-
-- macOS first
-- Ghostty-native orchestration
-- workspace-first continuity instead of multiplexer-first UX
-
-## Repository Contents
-
-- [`shaping.md`](./shaping.md): product direction and selected shape
-- [`spike-c1-2-workspace-model.md`](./spike-c1-2-workspace-model.md): workspace and terminal continuity model
-- [`spike-r4-ghostty-native.md`](./spike-r4-ghostty-native.md): Ghostty-native integration direction
-- [`spike-x3-minimal-companion-ui.md`](./spike-x3-minimal-companion-ui.md): minimal companion UX
-- [`spike-x3-raycast-launcher.md`](./spike-x3-raycast-launcher.md): Raycast as an early launcher/status host
-
-## Direction
-
-The product is intentionally not trying to become a full terminal multiplexer.
-
-It is trying to become the best way for Ghostty users to:
-
-- start structured work quickly
-- survive interruptions
-- recover context fast
-- continue without rebuilding everything from scratch
-
-## License
-
-No license has been added yet.
