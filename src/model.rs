@@ -146,6 +146,7 @@ pub struct TerminalSnapshot {
     pub surface_title: Option<String>,
     pub launch_intent: Option<String>,
     pub restore_status: Option<RestoreStatus>,
+    pub restore_note: Option<String>,
     pub last_seen_at: DateTime<Utc>,
 }
 
@@ -165,6 +166,7 @@ impl TerminalSnapshot {
             surface_title,
             launch_intent,
             restore_status: None,
+            restore_note: None,
             last_seen_at: Utc::now(),
         }
     }

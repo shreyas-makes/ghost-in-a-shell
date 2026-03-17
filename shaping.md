@@ -134,7 +134,7 @@ What remains unsolved:
 | **C3** | **Ghostty-native surface (macOS first)** | ⚠️ |
 | C3.1 | 🟡 Ghostty remains the only terminal renderer and visible shell surface users interact with | |
 | 🟡 C3.2 | 🟡 A small Rust service or CLI keeps the saved record of each workspace: window layout, tab layout, pane layout, labels, remembered locations, and recovery logic above Ghostty's own built-in window/tab/split concepts | |
-| 🟡 C3.3 | 🟡 macOS automation uses Ghostty's AppleScript hooks to open windows, create tabs, split panes, focus the right view, and read back enough visible state to rebuild the saved setup | |
+| 🟡 C3.3 | 🟡 macOS automation uses Ghostty's AppleScript hooks to open windows, create tabs, split panes, focus the right view, and read back enough visible state to rebuild the saved setup. See [spike-x5-ghostty-restore-fidelity.md](/Users/shreyas/Desktop/Projects/ghost-in-a-shell/spike-x5-ghostty-restore-fidelity.md). | ⚠️ |
 | 🟡 C3.4 | 🟡 Any extra product UI in v0 should live inside the terminal as a CLI or TUI for restore and save flows, rather than starting with a separate app surface | |
 | C3.5 | 🟡 Ghostty preview-scriptability risk is accepted, so adapter boundaries must stay narrow and swappable | |
 | C3.6 | 🟡 Linux and other platforms are deferred until the workspace model and recovery UX are proven on macOS | |
@@ -148,7 +148,7 @@ What remains unsolved:
 | **C5** | **Legible state model** | ⚠️ |
 | 🟡 C5.1 | 🟡 The restore flow must show the selected named Ghostty snapshot clearly: which windows existed, which tabs and panes existed inside them, and the labels for what each terminal was being used for | ⚠️ |
 | 🟡 C5.2 | 🟡 Each restored terminal should show enough plain-language context for recognition, such as a label, remembered folder or location, and the last intended command or task | ⚠️ |
-| 🟡 C5.3 | 🟡 The restore flow must make it obvious which terminals were restored as-is and which ones need the user to rerun something | ⚠️ |
+| 🟡 C5.3 | 🟡 The restore flow must make it obvious which terminals were restored as-is and which ones need the user to rerun something, including partial Ghostty adapter failures at window, tab, and pane granularity | ⚠️ |
 | 🟡 C5.4 | 🟡 The product should avoid overexplaining with dashboard-like status ideas in v0 and instead focus on “restored” versus “needs rerun” at the moment of recovery | ⚠️ |
 | **C6** | **Low-config onboarding** | |
 | C6.1 | First run focuses on one value proposition: your workspaces come back with enough context to continue | |
@@ -338,6 +338,19 @@ Standalone spike: [spike-x3-raycast-launcher.md](/Users/shreyas/Desktop/Projects
 | **X4-R5** | 🟡 The correct interpretation is “Raycast is a credible early launcher and status host on macOS,” not “Raycast is the recovery default or final product surface” |
 
 See [spike-x3-raycast-launcher.md](/Users/shreyas/Desktop/Projects/ghost-in-a-shell/spike-x3-raycast-launcher.md).
+
+## X5 Spike: Ghostty restore fidelity
+
+Standalone spike: [spike-x5-ghostty-restore-fidelity.md](/Users/shreyas/Desktop/Projects/ghost-in-a-shell/spike-x5-ghostty-restore-fidelity.md)
+
+### Result
+
+| Item | Outcome |
+|------|---------|
+| **X5-R1** | 🟡 Ghostty 1.3.1 does expose enough AppleScript structure to rebuild windows, tabs, and splits deterministically within one restore run |
+| **X5-R2** | 🟡 The adapter algorithm is now concrete: replay saved windows in order, tabs in order, and panes in saved pane order while keeping returned runtime IDs as in-memory anchors |
+| **X5-R3** | 🟡 Visible terminal and tab titles are restorable through `perform action`, while cwd, command, and initial input are directly restorable through `surface configuration` |
+| **X5-R4** | 🟡 Partial-failure policy is now shaped: degrade at terminal, tab, or window scope rather than aborting the whole restore unless Ghostty cannot materialize any root surface |
 
 ---
 

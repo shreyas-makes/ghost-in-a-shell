@@ -35,11 +35,11 @@ pub struct CapturedTerminal {
 #[derive(Debug, Clone)]
 pub struct AppleScriptGhosttyAdapter;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct GhosttyRefs {
-    window_id: i64,
-    _tab_id: i64,
-    terminal_id: i64,
+    window_id: String,
+    tab_id: String,
+    terminal_id: String,
 }
 
 impl AppleScriptGhosttyAdapter {
@@ -110,8 +110,10 @@ impl AppleScriptGhosttyAdapter {
 
         for window in &snapshot.windows {
             let mut window_ref: Option<GhosttyRefs> = None;
+
             for tab in &window.tabs {
-                let mut tab_anchor_terminal: Option<GhosttyRefs> = None;
+                let mut tab_anchor: Option<GhosttyRefs> = None;
+
                 for pane in &tab.panes {
                     let terminal = snapshot
                         .terminal_by_id(pane.terminal_id)
@@ -120,51 +122,70 @@ impl AppleScriptGhosttyAdapter {
                     let creation_result = if window_ref.is_none() && pane.pane_index == 0 {
                         self.new_window(terminal.working_directory.as_deref())
                     } else if pane.pane_index == 0 {
-                        self.new_tab(
-                            window_ref
-                                .ok_or_else(|| Error::Adapter("window ref missing".into()))?
-                                .window_id,
-                            terminal.working_directory.as_deref(),
-                        )
+                        match window_ref.as_ref() {
+                            Some(window_ref) => self.new_tab(
+                                window_ref.window_id.as_str(),
+                                terminal.working_directory.as_deref(),
+                            ),
+                            None => Err(Error::Adapter("window ref missing".into())),
+                        }
                     } else {
-                        self.split_terminal(
-                            tab_anchor_terminal
-                                .ok_or_else(|| {
-                                    Error::Adapter("tab anchor terminal missing".into())
-                                })?
-                                .terminal_id,
-                            direction_for_layout_slot(&pane.layout_slot),
-                            terminal.working_directory.as_deref(),
-                        )
+                        match tab_anchor.as_ref() {
+                            Some(anchor) => self.split_terminal(
+                                anchor,
+                                direction_for_layout_slot(&pane.layout_slot),
+                                terminal.working_directory.as_deref(),
+                            ),
+                            None => Err(Error::Adapter("tab anchor terminal missing".into())),
+                        }
                     };
 
-                    let status = if let Ok(created_refs) = creation_result {
-                        if window_ref.is_none() {
-                            window_ref = Some(created_refs);
-                        }
-                        if tab_anchor_terminal.is_none() || pane.pane_index == 0 {
-                            tab_anchor_terminal = Some(created_refs);
-                        }
-                        if run_commands {
-                            if let Some(intent) = &terminal.launch_intent {
-                                match self.send_text_to_terminal(created_refs.terminal_id, intent) {
-                                    Ok(()) => RestoreStatus::Restored,
-                                    Err(_) => RestoreStatus::NeedsRerun,
-                                }
-                            } else {
-                                RestoreStatus::NeedsRerun
+                    let (status, note) = match creation_result {
+                        Ok(created_refs) => {
+                            if window_ref.is_none() {
+                                window_ref = Some(created_refs.clone());
                             }
-                        } else {
-                            RestoreStatus::NeedsRerun
+                            if tab_anchor.is_none() || pane.pane_index == 0 {
+                                tab_anchor = Some(created_refs.clone());
+                                if let Some(title) =
+                                    tab.title.as_deref().filter(|title| !title.is_empty())
+                                {
+                                    let _ = self
+                                        .set_tab_title(created_refs.terminal_id.as_str(), title);
+                                }
+                            }
+
+                            if let Some(title) = terminal
+                                .surface_title
+                                .as_deref()
+                                .or(terminal.label.as_deref())
+                                .filter(|title| !title.is_empty())
+                            {
+                                let _ = self
+                                    .set_surface_title(created_refs.terminal_id.as_str(), title);
+                            }
+
+                            restore_status_for_terminal(terminal, run_commands, || {
+                                self.send_text_to_terminal(
+                                    created_refs.terminal_id.as_str(),
+                                    terminal
+                                        .launch_intent
+                                        .as_deref()
+                                        .expect("launch intent checked before execution"),
+                                )
+                            })
                         }
-                    } else {
-                        RestoreStatus::NeedsRerun
+                        Err(error) => (
+                            RestoreStatus::NeedsRerun,
+                            Some(format!("surface restore failed: {error}")),
+                        ),
                     };
 
                     if let Some(restored_terminal) =
                         restored.terminal_by_id_mut(terminal.terminal_id)
                     {
                         restored_terminal.restore_status = Some(status);
+                        restored_terminal.restore_note = note;
                     }
                 }
             }
@@ -173,16 +194,25 @@ impl AppleScriptGhosttyAdapter {
         Ok(restored)
     }
 
-    pub fn send_text_to_terminal(&self, terminal_id: i64, text: &str) -> Result<()> {
-        let escaped = applescript_string(text);
+    pub fn send_text_to_terminal(&self, terminal_id: &str, text: &str) -> Result<()> {
         let script = format!(
             "tell application \"Ghostty\"\n\
-             set targetTerm to first terminal whose id is {terminal_id}\n\
-             input text {escaped} to targetTerm\n\
+             set targetTerm to first terminal whose id is {}\n\
+             input text {} to targetTerm\n\
              send key \"enter\" to targetTerm\n\
-             end tell"
+             end tell",
+            applescript_string(terminal_id),
+            applescript_string(text)
         );
         self.run_script(&script).map(|_| ())
+    }
+
+    pub fn set_surface_title(&self, terminal_id: &str, title: &str) -> Result<()> {
+        self.perform_action_on_terminal(terminal_id, &format!("set_surface_title:{title}"))
+    }
+
+    pub fn set_tab_title(&self, terminal_id: &str, title: &str) -> Result<()> {
+        self.perform_action_on_terminal(terminal_id, &format!("set_tab_title:{title}"))
     }
 
     fn capture_state(&self) -> Result<GhosttyCapture> {
@@ -276,16 +306,17 @@ end tell
             .and_then(|raw| parse_ghostty_refs(&raw))
     }
 
-    fn new_tab(&self, window_id: i64, cwd: Option<&str>) -> Result<GhosttyRefs> {
+    fn new_tab(&self, window_id: &str, cwd: Option<&str>) -> Result<GhosttyRefs> {
         let cfg = applescript_config(cwd);
         let script = format!(
             "tell application \"Ghostty\"\n\
              {cfg}\n\
-             set winRef to first window whose id is {window_id}\n\
+             set winRef to first window whose id is {}\n\
              set tabRef to new tab in winRef with configuration cfg\n\
              set termRef to terminal 1 of tabRef\n\
              return (id of winRef as text) & \"|\" & (id of tabRef as text) & \"|\" & (id of termRef as text)\n\
-             end tell"
+             end tell",
+            applescript_string(window_id)
         );
         self.run_script(&script)
             .and_then(|raw| parse_ghostty_refs(&raw))
@@ -293,7 +324,7 @@ end tell
 
     fn split_terminal(
         &self,
-        terminal_id: i64,
+        anchor: &GhosttyRefs,
         direction: &str,
         cwd: Option<&str>,
     ) -> Result<GhosttyRefs> {
@@ -301,13 +332,28 @@ end tell
         let script = format!(
             "tell application \"Ghostty\"\n\
              {cfg}\n\
-             set anchorTerm to first terminal whose id is {terminal_id}\n\
+             set anchorTerm to first terminal whose id is {}\n\
              set newTerm to split anchorTerm direction {direction} with configuration cfg\n\
-             return (id of window of newTerm as text) & \"|\" & (id of tab of newTerm as text) & \"|\" & (id of newTerm as text)\n\
-             end tell"
+             return {} & \"|\" & {} & \"|\" & (id of newTerm as text)\n\
+             end tell",
+            applescript_string(anchor.terminal_id.as_str()),
+            applescript_string(anchor.window_id.as_str()),
+            applescript_string(anchor.tab_id.as_str())
         );
         self.run_script(&script)
             .and_then(|raw| parse_ghostty_refs(&raw))
+    }
+
+    fn perform_action_on_terminal(&self, terminal_id: &str, action: &str) -> Result<()> {
+        let script = format!(
+            "tell application \"Ghostty\"\n\
+             set targetTerm to first terminal whose id is {}\n\
+             perform action {} on targetTerm\n\
+             end tell",
+            applescript_string(terminal_id),
+            applescript_string(action)
+        );
+        self.run_script(&script).map(|_| ())
     }
 
     fn run_script(&self, script: &str) -> Result<String> {
@@ -336,7 +382,13 @@ pub fn parse_capture_output(raw: &str) -> Result<GhosttyCapture> {
 }
 
 fn applescript_string(input: &str) -> String {
-    format!("\"{}\"", input.replace('\\', "\\\\").replace('"', "\\\""))
+    format!(
+        "\"{}\"",
+        input
+            .replace('\\', "\\\\")
+            .replace('"', "\\\"")
+            .replace('\n', "\\n")
+    )
 }
 
 fn applescript_config(cwd: Option<&str>) -> String {
@@ -355,21 +407,18 @@ fn parse_ghostty_refs(raw: &str) -> Result<GhosttyRefs> {
     let window_id = parts
         .next()
         .ok_or_else(|| Error::Adapter("missing Ghostty window id".into()))?
-        .parse::<i64>()
-        .map_err(|error| Error::Adapter(format!("invalid Ghostty window id: {error}")))?;
+        .to_string();
     let tab_id = parts
         .next()
         .ok_or_else(|| Error::Adapter("missing Ghostty tab id".into()))?
-        .parse::<i64>()
-        .map_err(|error| Error::Adapter(format!("invalid Ghostty tab id: {error}")))?;
+        .to_string();
     let terminal_id = parts
         .next()
         .ok_or_else(|| Error::Adapter("missing Ghostty terminal id".into()))?
-        .parse::<i64>()
-        .map_err(|error| Error::Adapter(format!("invalid Ghostty terminal id: {error}")))?;
+        .to_string();
     Ok(GhosttyRefs {
         window_id,
-        _tab_id: tab_id,
+        tab_id,
         terminal_id,
     })
 }
@@ -383,6 +432,42 @@ fn direction_for_layout_slot(layout_slot: &str) -> &str {
         "down"
     } else {
         "right"
+    }
+}
+
+fn restore_status_for_terminal(
+    terminal: &TerminalSnapshot,
+    run_commands: bool,
+    run_launch_intent: impl FnOnce() -> Result<()>,
+) -> (RestoreStatus, Option<String>) {
+    if run_commands {
+        if let Some(intent) = terminal.launch_intent.as_deref() {
+            if run_launch_intent().is_ok() {
+                (
+                    RestoreStatus::Restored,
+                    Some(format!("restored and launched: {intent}")),
+                )
+            } else {
+                (
+                    RestoreStatus::NeedsRerun,
+                    Some(format!("shell restored; launch failed: {intent}")),
+                )
+            }
+        } else {
+            (
+                RestoreStatus::NeedsRerun,
+                Some("shell restored; no launch intent saved".into()),
+            )
+        }
+    } else {
+        (
+            RestoreStatus::NeedsRerun,
+            terminal
+                .launch_intent
+                .as_ref()
+                .map(|intent| format!("shell restored; run now available: {intent}"))
+                .or_else(|| Some("shell restored; no launch intent saved".into())),
+        )
     }
 }
 
@@ -408,9 +493,33 @@ mod tests {
 
     #[test]
     fn parses_ghostty_ids() {
-        let refs = parse_ghostty_refs("12|13|14").unwrap();
-        assert_eq!(refs.window_id, 12);
-        assert_eq!(refs._tab_id, 13);
-        assert_eq!(refs.terminal_id, 14);
+        let refs = parse_ghostty_refs("tab-group-123|tab-456|ABC-DEF").unwrap();
+        assert_eq!(refs.window_id, "tab-group-123");
+        assert_eq!(refs.tab_id, "tab-456");
+        assert_eq!(refs.terminal_id, "ABC-DEF");
+    }
+
+    #[test]
+    fn restore_status_is_restored_only_when_launch_runs() {
+        let terminal = TerminalSnapshot::new(
+            Some("Server".into()),
+            None,
+            Some("/tmp/app".into()),
+            Some("server".into()),
+            Some("bin/dev".into()),
+        );
+
+        let restored = restore_status_for_terminal(&terminal, true, || Ok(()));
+        let rerun = restore_status_for_terminal(&terminal, false, || Ok(()));
+        let failed =
+            restore_status_for_terminal(&terminal, true, || Err(Error::Adapter("x".into())));
+
+        assert_eq!(restored.0, RestoreStatus::Restored);
+        assert_eq!(rerun.0, RestoreStatus::NeedsRerun);
+        assert_eq!(failed.0, RestoreStatus::NeedsRerun);
+        assert_eq!(
+            rerun.1.as_deref(),
+            Some("shell restored; run now available: bin/dev")
+        );
     }
 }

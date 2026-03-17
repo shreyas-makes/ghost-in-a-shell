@@ -38,12 +38,21 @@ impl RecoverySummary {
                     RestoreStatus::NeedsRerun => RestoreOutcomeKind::NeedsRerun,
                 };
                 let detail = match kind {
-                    RestoreOutcomeKind::Restored => "restored shell surface".to_string(),
-                    RestoreOutcomeKind::NeedsRerun => terminal
-                        .launch_intent
+                    RestoreOutcomeKind::Restored => terminal
+                        .restore_note
                         .clone()
-                        .map(|intent| format!("needs rerun: {intent}"))
-                        .unwrap_or_else(|| "needs rerun: no launch intent saved".to_string()),
+                        .unwrap_or_else(|| "restored shell surface".to_string()),
+                    RestoreOutcomeKind::NeedsRerun => {
+                        terminal.restore_note.clone().unwrap_or_else(|| {
+                            terminal
+                                .launch_intent
+                                .clone()
+                                .map(|intent| format!("needs rerun: {intent}"))
+                                .unwrap_or_else(|| {
+                                    "needs rerun: no launch intent saved".to_string()
+                                })
+                        })
+                    }
                 };
                 TerminalRestoreOutcome {
                     terminal_id: terminal.terminal_id,
