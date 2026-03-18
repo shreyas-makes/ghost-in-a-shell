@@ -88,7 +88,8 @@ impl RecoverySummary {
 #[cfg(test)]
 mod tests {
     use crate::model::{
-        PaneSnapshot, TabSnapshot, TerminalSnapshot, WindowSnapshot, WorkspaceSnapshot,
+        PaneSnapshot, PaneTopologyHint, TabSnapshot, TerminalSnapshot, WindowSnapshot,
+        WorkspaceSnapshot,
     };
 
     use super::*;
@@ -126,11 +127,13 @@ mod tests {
                             pane_index: 0,
                             terminal_id: restored.terminal_id,
                             layout_slot: "pane-1".into(),
+                            topology: PaneTopologyHint::default(),
                         },
                         PaneSnapshot {
                             pane_index: 1,
                             terminal_id: needs_rerun.terminal_id,
                             layout_slot: "pane-2".into(),
+                            topology: PaneTopologyHint::default(),
                         },
                     ],
                 }],

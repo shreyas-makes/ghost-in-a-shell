@@ -146,7 +146,7 @@ What remains unsolved:
 | 🟡 C4.4 | 🟡 Recovery is a dedicated terminal flow showing recent named snapshots, terminal labels, and simple restore or rerun choices | |
 | 🟡 C4.5 | 🟡 Any v0 quick-entry affordance should stay minimal and optional; it is less important than making restore work reliably from inside Ghostty | |
 | **C5** | **Legible state model** | ⚠️ |
-| 🟡 C5.1 | 🟡 The restore flow must show the selected named Ghostty snapshot clearly: which windows existed, which tabs and panes existed inside them, and the labels for what each terminal was being used for | ⚠️ |
+| 🟡 C5.1 | 🟡 The restore flow must show the selected named Ghostty snapshot clearly: which windows existed, which tabs and panes existed inside them, and the labels for what each terminal was being used for. Exact arbitrary split geometry remains a separate topology question. See [spike-x6-split-topology-inference.md](/Users/shreyas/Desktop/Projects/ghost-in-a-shell/spike-x6-split-topology-inference.md). | ⚠️ |
 | 🟡 C5.2 | 🟡 Each restored terminal should show enough plain-language context for recognition, such as a label, remembered folder or location, and the last intended command or task | ⚠️ |
 | 🟡 C5.3 | 🟡 The restore flow must make it obvious which terminals were restored as-is and which ones need the user to rerun something, including partial Ghostty adapter failures at window, tab, and pane granularity | ⚠️ |
 | 🟡 C5.4 | 🟡 The product should avoid overexplaining with dashboard-like status ideas in v0 and instead focus on “restored” versus “needs rerun” at the moment of recovery | ⚠️ |
@@ -351,6 +351,20 @@ Standalone spike: [spike-x5-ghostty-restore-fidelity.md](/Users/shreyas/Desktop/
 | **X5-R2** | 🟡 The adapter algorithm is now concrete: replay saved windows in order, tabs in order, and panes in saved pane order while keeping returned runtime IDs as in-memory anchors |
 | **X5-R3** | 🟡 Visible terminal and tab titles are restorable through `perform action`, while cwd, command, and initial input are directly restorable through `surface configuration` |
 | **X5-R4** | 🟡 Partial-failure policy is now shaped: degrade at terminal, tab, or window scope rather than aborting the whole restore unless Ghostty cannot materialize any root surface |
+
+## X6 Spike: Split topology inference
+
+Standalone spike: [spike-x6-split-topology-inference.md](/Users/shreyas/Desktop/Projects/ghost-in-a-shell/spike-x6-split-topology-inference.md)
+
+### Result
+
+| Item | Outcome |
+|------|---------|
+| **X6-R1** | 🟡 Ghostty AppleScript does not directly expose a split tree, split parentage, or pane geometry for existing layouts |
+| **X6-R2** | 🟡 Directional pane adjacency can be inferred indirectly through `goto_split:<direction>` plus `focused terminal` |
+| **X6-R3** | 🟡 Adjacency is not yet enough to claim exact reconstruction of arbitrary complex split trees or size ratios |
+| **X6-R4** | 🟡 macOS accessibility probing through `System Events` was not a dependable extraction path in this environment |
+| **X6-R5** | 🟡 The stronger exact-layout promise is more defensible for app-owned topologies than for arbitrary captured Ghostty layouts |
 
 ---
 

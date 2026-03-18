@@ -135,6 +135,16 @@ pub struct PaneSnapshot {
     pub pane_index: usize,
     pub terminal_id: Uuid,
     pub layout_slot: String,
+    #[serde(default)]
+    pub topology: PaneTopologyHint,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PaneTopologyHint {
+    pub left: Option<Uuid>,
+    pub right: Option<Uuid>,
+    pub up: Option<Uuid>,
+    pub down: Option<Uuid>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
