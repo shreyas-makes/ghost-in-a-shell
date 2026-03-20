@@ -58,7 +58,7 @@ shaping: true
 | **C2** | Make continuity the default lifecycle: create, reopen, and resume workspaces without teaching detach/attach first | |
 | **C3** | 🟡 Use Ghostty as the visible terminal surface and orchestrate it externally through a macOS-first adapter rather than building a separate terminal emulator | |
 | 🟡 **C4** | 🟡 Provide a simple in-terminal command surface for save, switch, and recover actions | |
-| **C5** | Persist enough state to restore project context, layout intent, and interruption context in a legible way | ⚠️ |
+| **C5** | Persist enough state to restore project context, layout intent, and interruption context in a legible way | |
 | **C6** | Expose clear status cues so users can understand which workspace is active and what each terminal is doing | ⚠️ |
 | **C7** | Keep the default path zero- or low-config, with keyboard acceleration available after the initial success path | |
 | **C8** | 🟡 Defer non-macOS adapters until the workspace and recovery model are proven on macOS | |
@@ -115,7 +115,7 @@ What remains unsolved:
 **Notes:**
 - `R2` passes for Shape `C` because the current selected shape now has a concrete recognition-first continuity contract: `workspace_snapshot` plus `terminal_snapshot`, explicit recovery states, and relaunch actions where exact continuity cannot be proven.
 - `R4` passes for Shape `C` on a macOS-first basis because Ghostty remains the visible terminal surface while the product adds continuity through an external orchestration layer using Ghostty's AppleScript automation.
-- Remaining uncertainty is now implementation risk inside Shape `C`, not a fit-check failure: `C5`, `C6`, `C2.2`, `C2.3`, and `C6.3` still carry `⚠️` and should be resolved or further spiked during detailing and slicing.
+- Remaining uncertainty is now implementation risk inside Shape `C`, not a fit-check failure: `C2.2`, `C2.3`, and `C6.3` still carry `⚠️`, while `C5` is now proven good enough for common nested Ghostty layouts through topology-aware restore heuristics.
 
 ---
 
@@ -145,11 +145,11 @@ What remains unsolved:
 | C4.3 | Shortcut hints appear in context after first-run success rather than front-loading complexity | |
 | 🟡 C4.4 | 🟡 Recovery is a dedicated terminal flow showing recent named snapshots, terminal labels, and simple restore or rerun choices | |
 | 🟡 C4.5 | 🟡 Any v0 quick-entry affordance should stay minimal and optional; it is less important than making restore work reliably from inside Ghostty | |
-| **C5** | **Legible state model** | ⚠️ |
-| 🟡 C5.1 | 🟡 The restore flow must show the selected named Ghostty snapshot clearly: which windows existed, which tabs and panes existed inside them, and the labels for what each terminal was being used for. Exact arbitrary split geometry remains a separate topology question. See [spike-x6-split-topology-inference.md](/Users/shreyas/Desktop/Projects/ghost-in-a-shell/spike-x6-split-topology-inference.md). | ⚠️ |
-| 🟡 C5.2 | 🟡 Each restored terminal should show enough plain-language context for recognition, such as a label, remembered folder or location, and the last intended command or task | ⚠️ |
-| 🟡 C5.3 | 🟡 The restore flow must make it obvious which terminals were restored as-is and which ones need the user to rerun something, including partial Ghostty adapter failures at window, tab, and pane granularity | ⚠️ |
-| 🟡 C5.4 | 🟡 The product should avoid overexplaining with dashboard-like status ideas in v0 and instead focus on “restored” versus “needs rerun” at the moment of recovery | ⚠️ |
+| **C5** | **Legible state model** | |
+| 🟡 C5.1 | 🟡 The restore flow must show the selected named Ghostty snapshot clearly: which windows existed, which tabs and panes existed inside them, and the labels for what each terminal was being used for. Topology-aware restore now preserves common nested layout hierarchy, while exact arbitrary divider geometry remains out of scope. See [spike-x6-split-topology-inference.md](/Users/shreyas/Desktop/Projects/ghost-in-a-shell/docs/spike-x6-split-topology-inference.md). | |
+| 🟡 C5.2 | 🟡 Each restored terminal should show enough plain-language context for recognition, such as a label, remembered folder or location, and the last intended command or task | |
+| 🟡 C5.3 | 🟡 The restore flow must make it obvious which terminals were restored as-is and which ones need the user to rerun something, including partial Ghostty adapter failures at window, tab, and pane granularity | |
+| 🟡 C5.4 | 🟡 The product should avoid overexplaining with dashboard-like status ideas in v0 and instead focus on “restored” versus “needs rerun” at the moment of recovery | |
 | **C6** | **Low-config onboarding** | |
 | C6.1 | First run focuses on one value proposition: your workspaces come back with enough context to continue | |
 | 🟡 C6.2 | 🟡 Instead of a canned template, users should be able to arrange Ghostty the way they want and then save that exact arrangement as the workspace to bring back later | |
@@ -244,7 +244,7 @@ What remains unsolved:
 | 🟡 AF4 | 🟡 A user can save the exact Ghostty arrangement they have already built instead of starting from a canned template | 🟡 `C6.2`, `U2`, `N2`, `N9` |
 | 🟡 AF5 | 🟡 Onboarding can teach one save-and-restore loop in-product instead of teaching mux vocabulary or configuration upfront | 🟡 `C6`, `U15`, `U16`, `U17`, `N11` |
 | 🟡 AF6 | 🟡 Launcher and recovery can both live inside the terminal as TUIs instead of requiring a separate app surface | 🟡 `C3.4`, `C4.1`, `C4.4`, `P1`, `P3` |
-| 🟡 AF7 | 🟡 One saved setup can represent a whole project across multiple windows, tabs, panes, and folders | 🟡 `C1.1`, `C1.2`, `JY1`, `JY3` |
+| 🟡 AF7 | 🟡 One saved setup can represent a whole project across multiple windows, tabs, panes, and folders, including common nested split hierarchies such as a dominant pane plus stacked side panes | 🟡 `C1.1`, `C1.2`, `JY1`, `JY3`, `C5.1` |
 
 ---
 
@@ -366,6 +366,18 @@ Standalone spike: [spike-x6-split-topology-inference.md](/Users/shreyas/Desktop/
 | **X6-R4** | 🟡 macOS accessibility probing through `System Events` was not a dependable extraction path in this environment |
 | **X6-R5** | 🟡 The stronger exact-layout promise is more defensible for app-owned topologies than for arbitrary captured Ghostty layouts |
 
+## X7 Spike: In-Ghostty save invocation
+
+Standalone spike: [spike-x7-in-ghostty-save.md](/Users/shreyas/Desktop/Projects/ghost-in-a-shell/docs/spike-x7-in-ghostty-save.md)
+
+### Result
+
+| Item | Outcome |
+|------|---------|
+| 🟡 **X7-R1** | 🟡 The current `save` flow is already runnable from a Ghostty pane because capture is driven by AppleScript against Ghostty, not by the caller terminal host |
+| 🟡 **X7-R2** | 🟡 Running `save` or the TUI inside Ghostty captures the invoking Ghostty terminal too, because the adapter walks the live Ghostty windows, tabs, and terminals |
+| 🟡 **X7-R3** | 🟡 That behavior is acceptable for v0 and matches the intended user journey: save the live Ghostty setup from within Ghostty itself |
+
 ---
 
 ## Decision
@@ -382,3 +394,4 @@ Spike outcomes so far:
 - `X2` is now sufficiently shaped through the continuity contract and workspace metadata model in [spike-c1-2-workspace-model.md](/Users/shreyas/Desktop/Projects/ghost-in-a-shell/spike-c1-2-workspace-model.md).
 - `X3` is now sufficiently shaped through the minimal companion UI model in [spike-x3-minimal-companion-ui.md](/Users/shreyas/Desktop/Projects/ghost-in-a-shell/spike-x3-minimal-companion-ui.md).
 - 🟡 `X4` remains historical exploration only and is not part of the selected v0 path.
+- 🟡 `X7` confirms that the intended save journey already works: run save inside Ghostty and persist the live setup, including the invoking pane when it is part of the real workspace.

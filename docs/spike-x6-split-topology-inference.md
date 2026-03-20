@@ -14,13 +14,13 @@ shaping: true
 - cwd targets
 - visible tab and surface titles
 
-But a real user test with a `1 tab / 5 split` arrangement showed a remaining failure:
+But a real user test with a `1 tab / 5 split` arrangement originally showed a remaining failure:
 
 - the saved snapshot captures the correct number of panes
 - restore recreates the right number of panes
 - restore does **not** recreate the exact split arrangement
 
-The current saved model only persists a flat pane list, not a split tree. This spike investigates whether Ghostty exposes enough information to derive the split topology anyway.
+The current saved model only persists a flat pane list plus topology hints, not a true split tree. This spike investigates whether Ghostty exposes enough information to derive the split topology anyway and whether that is sufficient for useful reconstruction.
 
 ## Goal
 
@@ -111,6 +111,18 @@ But adjacency alone does **not** necessarily give:
 
 So adjacency is stronger than the current flat pane list, but weaker than a true persisted split tree with geometry.
 
+In practice, that turned out to be enough for an important middle ground:
+
+- capture directional adjacency as topology hints
+- recognize common layout archetypes from that graph
+- replay a restore sequence that preserves layout hierarchy convincingly
+
+Live implementation and user verification now confirm this works for common nested arrangements such as:
+
+- dominant left pane
+- stacked right-side panes
+- bottom-right sub-split
+
 ### F4: macOS accessibility did not produce a viable geometry path in this environment
 
 Probing `System Events` against the Ghostty process timed out repeatedly when trying to inspect:
@@ -144,6 +156,11 @@ There are now two materially different promises we could make:
 
 This is the key product consequence of the spike.
 
+Since the original spike, the product has landed in a practical middle position:
+
+1. arbitrary live layouts do not restore with mathematically exact geometry
+2. common captured layouts can restore with a close visual approximation that preserves major regions and nesting
+
 ---
 
 ## Answers
@@ -152,7 +169,7 @@ This is the key product consequence of the spike.
 |----------|--------|
 | **X6-Q1** | No direct topology API was found. Ghostty AppleScript exposes a flat list of terminals in a tab, but not parent-child split relationships, bounds, or size ratios. |
 | **X6-Q2** | Yes, directional adjacency can be inferred indirectly by focusing a terminal, invoking `goto_split:<direction>`, and reading back the resulting `focused terminal`. |
-| **X6-Q3** | Not fully. Adjacency is enough to derive a neighbor graph, but not enough to guarantee a unique exact split tree or exact geometry for arbitrary complex layouts. |
+| **X6-Q3** | Not fully. Adjacency is enough to derive a neighbor graph and reconstruct common layout hierarchy convincingly, but not enough to guarantee a unique exact split tree or exact geometry for arbitrary complex layouts. |
 | **X6-Q4** | Not reliably in this environment. `System Events` probing against Ghostty timed out, so accessibility is not currently a dependable implementation path. |
 | **X6-Q5** | Exact restore of arbitrary preexisting Ghostty split layouts remains unproven. A stronger exact-layout promise is safer if the app owns the topology from creation time rather than reverse-engineering arbitrary live layouts. |
 
@@ -163,16 +180,18 @@ This is the key product consequence of the spike.
 ### What we can say now
 
 - Pane count and terminal metadata are capturable.
-- Directional neighbor relationships are probably capturable.
+- Directional neighbor relationships are capturable.
+- Common nested layout hierarchy is reconstructable from that graph.
 - Exact split geometry for arbitrary live layouts is still not proven.
 
 ### What this means for v0
 
-The current v0 promise should stay:
+The current v0 promise should be:
 
 - recognition-first restore
 - correct windows/tabs/pane counts
 - cwd and title restoration
+- approximate layout hierarchy preservation for common nested arrangements
 - honest partial restore
 
 It should **not** promise:
@@ -181,11 +200,26 @@ It should **not** promise:
 
 ### What would improve the situation
 
-The most promising next implementation shape is:
+The promising direction from this spike has now been implemented:
 
-- capture directional adjacency as an intermediate topology hint
-- evaluate whether common layouts can be reconstructed from that graph
-- if exact fidelity is still ambiguous, move the stronger promise to app-owned layouts rather than arbitrary captured layouts
+- directional adjacency is captured as a topology hint during save
+- common layouts are reconstructed from that graph during restore
+- the stronger exactness promise is still reserved for future model evolution, not claimed for arbitrary captured geometry
+
+## Outcome
+
+This spike is partially resolved and operationalized.
+
+It did not unlock exact topology capture. It did unlock something more useful for v0:
+
+- enough structural information to preserve the shape of common pane arrangements
+- a principled boundary for what the product can and cannot claim
+
+The resulting v0 statement is:
+
+- save captures directional topology hints
+- restore preserves common layout hierarchy convincingly
+- exact arbitrary divider geometry remains out of scope
 
 ## Sources
 

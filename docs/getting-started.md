@@ -40,7 +40,7 @@ cargo run -- tui
 ## Typical flow
 
 1. Open Ghostty and arrange windows, tabs, and splits.
-2. Save the workspace:
+2. From inside Ghostty, save the workspace:
 
 ```bash
 cargo run -- save demo
@@ -52,7 +52,7 @@ cargo run -- save demo
 cargo run -- restore demo
 ```
 
-4. Browse snapshots in the TUI:
+4. Browse snapshots in the TUI from inside Ghostty:
 
 ```bash
 cargo run -- tui
@@ -60,6 +60,7 @@ cargo run -- tui
 
 ## Notes
 
-- Save from inside Ghostty if you want the current arrangement captured.
+- The default workflow is to run save and restore from inside Ghostty.
+- The snapshot captures the live Ghostty arrangement at the moment you invoke it, including the pane running the command if that pane is part of your setup.
 - For best layout restore results, save a fresh snapshot with the current build.
 - Restore aims to preserve layout hierarchy, not exact divider ratios.

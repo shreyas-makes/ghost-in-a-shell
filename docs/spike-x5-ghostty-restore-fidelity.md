@@ -13,14 +13,14 @@ Shape `C` is selected in [shaping.md](/Users/shreyas/Desktop/Projects/ghost-in-a
 - list and inspect saved snapshots
 - run a restore flow and render a recovery summary
 
-What is not yet proven is the most important macOS-native part of `C3`:
+What was not yet proven at the start of this spike was the most important macOS-native part of `C3`:
 
 - exact tab recreation
-- exact split recreation
+- convincing split recreation
 - reliable pane targeting and creation order
 - applying titles or labels back onto restored Ghostty surfaces
 
-The current Rust adapter is close enough to validate the product boundary, but not yet concrete enough to claim that Ghostty restore fidelity is solved.
+That gap is now narrower. The current Rust adapter has since proven that Ghostty restore fidelity is good enough for v0 across windows, tabs, cwd, titles, and common nested split hierarchies.
 
 ## Goal
 
@@ -119,7 +119,7 @@ For v0, the adapter can restore saved structure reliably enough by replaying:
 2. each tab within that window in order
 3. each pane within that tab in saved pane order
 
-This does not prove arbitrary geometric equivalence for complex split trees, but it does give a deterministic restore algorithm for the current linear pane list model in `workspace_snapshot`.
+This does not prove arbitrary geometric equivalence for every complex split tree, but it does give a deterministic restore algorithm for the current pane model in `workspace_snapshot`, and later topology-aware improvements built on this successfully restored common nested layouts in live testing.
 
 ### F3: Working directory is restorable, but it may not be observable immediately
 
@@ -179,7 +179,7 @@ The adapter should only hard-stop the whole restore when the failure removes the
 - AppleScript is disabled
 - the initial root window creation fails and no restore target can be materialized at all
 
-### F6: The current saved model is good enough for v0 tabs and pane counts, but not for arbitrary split geometry
+### F6: The current saved model is good enough for v0 tabs, pane counts, and common nested layout hierarchy, but not for arbitrary split geometry
 
 The saved snapshot currently stores:
 
@@ -194,8 +194,10 @@ This is enough to restore:
 - tab count
 - terminal count per tab
 - pane creation order
+- topology hints for directional adjacency
+- common nested split hierarchy through restore heuristics
 
-It is not enough to restore an arbitrary split tree with exact left/right/up/down nesting, because the current model does not persist parent-child split structure.
+It is not enough to restore an arbitrary split tree with exact divider positions and guaranteed unique geometry, because the current model still does not persist parent-child split structure or ratios.
 
 Implication:
 
@@ -209,7 +211,7 @@ Implication:
 | Question | Answer |
 |----------|--------|
 | **X5-Q1** | Ghostty exposes `new window`, `new tab`, `split`, `focus`, `input text`, `send key`, and `perform action`, with runtime `id` values on windows, tabs, and terminals that are stable enough to use as anchors during one restore run. |
-| **X5-Q2** | The adapter should restore deterministically by replaying the saved workspace in order: create window root terminal, append tabs in saved order, then create additional panes within each tab in saved pane order using the first terminal in that tab as the split anchor unless a richer split tree is later persisted. |
+| **X5-Q2** | The adapter should restore deterministically by replaying the saved workspace in order: create window root terminal, append tabs in saved order, then create additional panes within each tab using topology-aware split planning. The current v0 implementation now does this well enough to preserve common layout hierarchy, not just pane count. |
 | **X5-Q3** | Working directory is directly restorable via `initial working directory`. Commands and initial text are directly restorable via `command`, `initial input`, and `wait after command`. Tab and surface titles are indirectly restorable through `perform action "set_tab_title:..."` and `perform action "set_surface_title:..."`. There is no direct writable AppleScript property for product-level labels. |
 | **X5-Q4** | Restore failures should degrade at the smallest honest scope: terminal-level for split or rerun failures, tab-level for tab creation failures, window-level for window creation failures, and whole-restore failure only when Ghostty or AppleScript cannot materialize any root surface. |
 | **X5-Q5** | The live validation matrix should prove: single-window single-tab restore, multi-tab restore order, multi-split restore count/order, cwd restoration after a short delay, title override application, rerunnable command execution, and honest partial-failure summaries when one creation step is intentionally broken. |
@@ -239,7 +241,7 @@ For one saved workspace:
 |-------------|------------------------|-----------|-------|
 | Window count/order | Yes | `new window` in sequence | Deterministic |
 | Tab count/order | Yes | `new tab in <window>` in sequence | `tab.index` confirms order |
-| Pane count/order | Yes, within current flat model | `split <terminal> direction ...` in sequence | Exact geometric tree is not preserved yet |
+| Pane count/order | Yes | `split <terminal> direction ...` in sequence | Common nested hierarchy is now preserved heuristically |
 | Working directory | Yes | `initial working directory` | Observation may lag briefly |
 | Launch command | Yes | `command` or `initial input` | Choose one policy and keep it consistent |
 | Wait-after-exit behavior | Yes | `wait after command` | Useful for one-shot commands |
@@ -247,6 +249,22 @@ For one saved workspace:
 | Tab title | Yes | `perform action "set_tab_title:..."` | Indirect, not a writable property |
 | Product-level label | Partially | map label to title override | No separate native label field in AppleScript |
 | Exact process state | No | out of scope | `R2` intentionally rejects this promise |
+
+## Outcome
+
+This spike is now resolved for v0.
+
+Ghostty restore fidelity is good enough to support the selected shape on macOS first:
+
+- windows, tabs, and terminals restore reliably
+- cwd and visible titles restore
+- partial failures degrade honestly
+- common nested split arrangements restore with convincing hierarchy
+
+The remaining boundary is narrower:
+
+- exact arbitrary divider geometry is still not promised
+- exact process resurrection is still out of scope by design
 
 ## Manual Validation Matrix
 
