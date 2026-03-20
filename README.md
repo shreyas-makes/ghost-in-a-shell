@@ -1,4 +1,8 @@
-# ghost-in-a-shell
+![Google Gemini](https://github.com/user-attachments/assets/ea7f66a7-91a1-49d4-a125-13bad48bb16c)# ghost-in-a-shell
+
+![Uploading Google ![Google Gemini](https://github.com/user-attachments/assets/27b64e8e-4012-4e61-bf77-f0d14e318e0d)
+Gemini.jpg…]()
+
 
 `ghost-in-a-shell` saves and restores Ghostty workspaces on macOS. It restores windows, tabs, terminals, working directories, titles where Ghostty allows them, and approximate split layout for common nested arrangements.
 
